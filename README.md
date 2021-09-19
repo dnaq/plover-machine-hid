@@ -110,7 +110,7 @@ The keys are as follows, and the bit/byte position in the reports map to the fol
 ```
 
 So the first bit/byte of the report (after the report type byte) maps to key
-`#2` and the last bit/byte of the report maps to `X26`.
+`#1` and the last bit/byte of the report maps to `X26`.
 
 ## Sample Firmware
 
