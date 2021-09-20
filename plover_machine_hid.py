@@ -101,8 +101,9 @@ class HidMachine(ThreadedStenotypeBase):
         self._tresholds = [0.5]*N_BUTTONS
 
     def _parse(self, report):
-        if report[0] == SIMPLE_REPORT_TYPE and len(report) == SIMPLE_REPORT_LEN:
-            return BitString(report[1:])
+        # Windows will always return the largest report size (padded with zeros).
+        if report[0] == SIMPLE_REPORT_TYPE and len(report) >= SIMPLE_REPORT_LEN:
+            return BitString(report[1:SIMPLE_REPORT_LEN])
         elif (
             report[0] == COMPLICATED_REPORT_TYPE
             and len(report) == COMPLICATED_REPORT_LEN
