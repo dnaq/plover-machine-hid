@@ -142,6 +142,7 @@ class HidMachine(ThreadedStenotypeBase):
                 keystate = BitString(N_BUTTONS)
 
     def start_capture(self):
+        self.finished.clear()
         self._initializing()
         # Enumerate all hid devices on the machine and if we find one with our
         # usage page and usage we try to connect to it.
@@ -164,10 +165,10 @@ class HidMachine(ThreadedStenotypeBase):
         self.start()
 
     def stop_capture(self):
+        super().stop_capture()
         if self._hid:
             self._hid.close()
             self._hid = None
-        self._stopped()
 
     @classmethod
     def get_option_info(cls):
