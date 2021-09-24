@@ -120,3 +120,6 @@ X1 S1- T- P- H- *1 *3 -F -P -L -T -D
 X2 S2- K- W- R- *2 *4 -R -B -G -S -Z
           #1 A   O  E  U  #7
 ```
+
+Sample firmware for the uni (both the pro micro and the usb-c versions) are also included. The keymap is the same as above
+except for the X-keys.
