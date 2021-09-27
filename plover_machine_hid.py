@@ -18,12 +18,12 @@ import hid
 USAGE_PAGE: int = 0xFF50
 USAGE: int = 0x4C56
 
-N_BUTTONS: int = 64
+N_LEVERS: int = 64
 
 # A simple report contains the report id 1 and one bit
 # for each of the 64 buttons in the report.
 SIMPLE_REPORT_TYPE: int = 0x01
-SIMPLE_REPORT_LEN: int = N_BUTTONS // 8
+SIMPLE_REPORT_LEN: int = N_LEVERS // 8
 
 class InvalidReport(Exception):
     pass
@@ -46,23 +46,18 @@ class HidMachine(ThreadedStenotypeBase):
         self._hid = None
 
     def _parse(self, report):
-        # if the report is exactly the length it should be
-        # we assume that the report id hasn't been prepended to it
-        # (which seems to be allowed by the hid spec)
-        # so just return the raw report.
-        if len(report) == SIMPLE_REPORT_LEN:
-            return BitString(report)
-        # otherwise the first byte is the report id, so we skip that
-        # we should only receive reports of the usage page that we have
-        # opened, so we shouldn't need to dispatch on the report id
-        elif len(report) > SIMPLE_REPORT_LEN:
+        # The first byte is the report id, and due to idiosynchrasies
+        # in how HID-apis work on different operating system we can't
+        # map the report id to the contents in a good way, so we force
+        # compliant devices to always use a report id of 0x50 ('P').
+        if len(report) > SIMPLE_REPORT_LEN and report[0] == 0x50:
             return BitString(report[1:SIMPLE_REPORT_LEN+1])
         else:
             raise InvalidReport()
 
     def run(self):
         self._ready()
-        keystate = BitString(N_BUTTONS)
+        keystate = BitString(N_LEVERS)
         while not self.finished.wait(0):
             try:
                 report = self._hid.read(65536, timeout=1000)
@@ -71,7 +66,10 @@ class HidMachine(ThreadedStenotypeBase):
                 return
             if not report:
                 continue
-            report = self._parse(report)
+            try:
+                report = self._parse(report)
+            except InvalidReport:
+                continue
             keystate |= report
             if not report:
                 steno_actions = self.keymap.keys_to_actions(
@@ -79,7 +77,7 @@ class HidMachine(ThreadedStenotypeBase):
                 )
                 if steno_actions:
                     self._notify(steno_actions)
-                keystate = BitString(N_BUTTONS)
+                keystate = BitString(N_LEVERS)
 
     def start_capture(self):
         self.finished.clear()
