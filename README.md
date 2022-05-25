@@ -119,6 +119,6 @@ except for the X-keys.
 
 ## Future Work
 - [x] Implement this protocol for QMK.
-- [ ] Implement this protocol for ZMK.
+- [x] Implement this protocol for ZMK.
 - [ ] Create a Usage Page/Usage for lever machines sending variable lever pressure.
 - [ ] Look into using Output Reports for sending things to the steno machine from plover.
