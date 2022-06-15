@@ -11,9 +11,22 @@ Most buttons have the same names as in GeminiPR, except for the extra buttons
 which are called X1-X26.
 '''
 from plover.machine.base import ThreadedStenotypeBase
+from plover import log
 
 from bitstring import BitString
 import hid
+import platform
+
+# This is a hack to not open the hid device in exclusive mode on
+# darwin, if the version of hidapi installed is current enough
+if platform.system() == "Darwin":
+    import ctypes
+    try:
+        hid.hidapi.hid_darwin_set_open_exclusive.argtypes = (ctypes.c_int, )
+        hid.hidapi.hid_darwin_set_open_exclusive.restype = None
+        hid.hidapi.hid_darwin_set_open_exclusive(0)
+    except AttributeError as e:
+        log.error("hidapi < 0.12 in use, plover-hid will not work correctly")
 
 USAGE_PAGE: int = 0xFF50
 USAGE: int = 0x4C56
