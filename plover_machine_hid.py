@@ -28,18 +28,31 @@ SIMPLE_REPORT_LEN: int = N_LEVERS // 8
 class InvalidReport(Exception):
     pass
 
+STENO_KEY_CHART = ("S-", "T-", "K-", "P-", "W-", "H-",
+                   "R-", "A-", "O-", "*", "-E", "-U",
+                   "-F", "-R", "-P", "-B", "-L", "-G",
+                   "-T", "-S", "-D", "-Z", "#",
+                   "X1", "X2", "X3", "X4", "X5", "X6",
+                   "X7", "X8", "X9", "X10", "X11", "X12",
+                   "X13", "X14", "X15", "X16", "X17", "X18",
+                   "X19", "X20", "X21", "X22", "X23", "X24",
+                   "X25", "X26", "X27", "X28", "X29", "X30",
+                   "X31", "X32", "X33", "X34", "X35", "X36",
+                   "X37", "X38", "X39", "X40", "X41")
+
+print('steno key chart', len(STENO_KEY_CHART))
 class HidMachine(ThreadedStenotypeBase):
-    KEYS_LAYOUT: str = """
-        #1  #2 #3 #4 #5 #6 #7 #8 #9 #A #B #C
-        X1 S1- T- P- H- *1 *3 -F -P -L -T -D
-        X2 S2- K- W- R- *2 *4 -R -B -G -S -Z
-               X3 A- O-       -E -U X4
-
-     X5  X6  X7  X8  X9  X10 X11 X12 X13 X14 X15
-     X16 X17 X18 X19 X20 X21 X22 X23 X24 X25 X26
-    """
-    STENO_KEY_MAP: [str] = KEYS_LAYOUT.split()
-
+    KEYS_LAYOUT: str = '''
+        #  #  #  #  #  #  #  #  #  #
+        S- T- P- H- *  -F -P -L -T -D
+        S- K- W- R- *  -R -B -G -S -Z
+              A- O-    -E -U
+     X1  X2  X3  X4  X5  X6  X7  X8  X9  X10
+     X11 X12 X13 X14 X15 X16 X17 X18 X19 X20
+     X21 X22 X23 X24 X25 X26 X27 X28 X29 X30
+     X31 X32 X33 X34 X35 X36 X37 X38 X39 X40
+     X41
+    '''
     def __init__(self, params):
         super().__init__()
         self._params = params
@@ -73,7 +86,7 @@ class HidMachine(ThreadedStenotypeBase):
             keystate |= report
             if not report:
                 steno_actions = self.keymap.keys_to_actions(
-                    [self.STENO_KEY_MAP[i] for (i, x) in enumerate(keystate) if x]
+                    [STENO_KEY_CHART[i] for (i, x) in enumerate(keystate) if x]
                 )
                 if steno_actions:
                     self._notify(steno_actions)
