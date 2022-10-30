@@ -110,8 +110,10 @@ X2 S2- K- W- R- *2 *4 -R -B -G -S -Z
           #  A   O  E  U  #
 ```
 
-Sample firmware for the uni (both the pro micro and the usb-c versions) are also included. The keymap is the same as above
-except for the X-keys.
+## Plover HID Inspector
+
+@jthlim has created a WebHID based tool for inspecting output from any Plover HID machine.
+This tool can be used to help debug any Plover HID protocol issues if you're adding Plover HID to your own board. The tool can be found [here](https://lim.au/#/software/plover-hid) and required a web browser supporting WebHID.
 
 ## Future Work
 - [x] Implement this protocol for QMK.
