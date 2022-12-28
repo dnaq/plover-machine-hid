@@ -13,7 +13,7 @@ which are called X1-X26.
 from plover.machine.base import ThreadedStenotypeBase
 from plover import log
 
-from bitstring import BitString
+from bitstring import Bits
 import hid
 import platform
 
@@ -77,13 +77,13 @@ class HidMachine(ThreadedStenotypeBase):
         # map the report id to the contents in a good way, so we force
         # compliant devices to always use a report id of 0x50 ('P').
         if len(report) > SIMPLE_REPORT_LEN and report[0] == 0x50:
-            return BitString(report[1:SIMPLE_REPORT_LEN+1])
+            return Bits(report[1:SIMPLE_REPORT_LEN+1])
         else:
             raise InvalidReport()
 
     def run(self):
         self._ready()
-        keystate = BitString(N_LEVERS)
+        keystate = Bits(N_LEVERS)
         while not self.finished.wait(0):
             try:
                 report = self._hid.read(65536, timeout=1000)
@@ -103,7 +103,7 @@ class HidMachine(ThreadedStenotypeBase):
                 )
                 if steno_actions:
                     self._notify(steno_actions)
-                keystate = BitString(N_LEVERS)
+                keystate = Bits(N_LEVERS)
 
     def start_capture(self):
         self.finished.clear()
