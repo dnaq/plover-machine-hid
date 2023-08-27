@@ -13,7 +13,7 @@ which are called X1-X26.
 from plover.machine.base import ThreadedStenotypeBase
 from plover import log
 
-from bitstring import Bits
+from bitarray import bitarray
 import hid
 import platform
 
@@ -53,7 +53,6 @@ STENO_KEY_CHART = ("S-", "T-", "K-", "P-", "W-", "H-",
                    "X31", "X32", "X33", "X34", "X35", "X36",
                    "X37", "X38", "X39", "X40", "X41")
 
-print('steno key chart', len(STENO_KEY_CHART))
 class HidMachine(ThreadedStenotypeBase):
     KEYS_LAYOUT: str = '''
         #  #  #  #  #  #  #  #  #  #
@@ -77,13 +76,16 @@ class HidMachine(ThreadedStenotypeBase):
         # map the report id to the contents in a good way, so we force
         # compliant devices to always use a report id of 0x50 ('P').
         if len(report) > SIMPLE_REPORT_LEN and report[0] == 0x50:
-            return Bits(report[1:SIMPLE_REPORT_LEN+1])
+            b = bitarray()
+            b.frombytes(report[1:SIMPLE_REPORT_LEN+1])
+            return b
         else:
             raise InvalidReport()
 
     def run(self):
         self._ready()
-        keystate = Bits(N_LEVERS)
+        keystate = bitarray(N_LEVERS)
+        keystate.setall(False)
         while not self.finished.wait(0):
             try:
                 report = self._hid.read(65536, timeout=1000)
@@ -97,17 +99,13 @@ class HidMachine(ThreadedStenotypeBase):
             except InvalidReport:
                 continue
             keystate |= report
-            # bitstring changed its API in a minor version
-            # causing the check for `not report` to always fail
-            # so we switched to `report.all(False)` which is guaranteed
-            # to return True if all bits in the report are set to 0
-            if report.all(False):
+            if not report.any():
                 steno_actions = self.keymap.keys_to_actions(
                     [STENO_KEY_CHART[i] for (i, x) in enumerate(keystate) if x]
                 )
                 if steno_actions:
                     self._notify(steno_actions)
-                keystate = Bits(N_LEVERS)
+                keystate.setall(False)
 
     def start_capture(self):
         self.finished.clear()
