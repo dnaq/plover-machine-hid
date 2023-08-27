@@ -97,7 +97,11 @@ class HidMachine(ThreadedStenotypeBase):
             except InvalidReport:
                 continue
             keystate |= report
-            if not report:
+            # bitstring changed its API in a minor version
+            # causing the check for `not report` to always fail
+            # so we switched to `report.all(False)` which is guaranteed
+            # to return True if all bits in the report are set to 0
+            if report.all(False):
                 steno_actions = self.keymap.keys_to_actions(
                     [STENO_KEY_CHART[i] for (i, x) in enumerate(keystate) if x]
                 )
