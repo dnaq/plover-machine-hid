@@ -22,6 +22,7 @@ from plover.misc import boolean
 
 import hid
 import platform
+import time
 
 # This is a hack to not open the hid device in exclusive mode on
 # darwin, if the version of hidapi installed is current enough
@@ -98,7 +99,7 @@ class HidMachine(ThreadedStenotypeBase):
         keystate = 0
         current = 0
         last_sent = 0
-        repeat_timer = 0
+        press_started = time.time()
         sent_first_up = False
         while not self.finished.wait(0):
             interval_ms = self._params["repeat_interval_ms"]
@@ -109,20 +110,17 @@ class HidMachine(ThreadedStenotypeBase):
                 return
             if not report:
                 # The set of keys pressed down hasn't changed. Figure out if we need to be sending repeats:
-                if self._params["double_tap_repeat"] and 0 != current == last_sent:
-                    if repeat_timer < self._params["repeat_delay_ms"]:
-                        repeat_timer += interval_ms
-                    else:
-                        self.send(current)
-                        # Avoid sending an extra chord when the repeated chord is released.
-                        sent_first_up = True
+                if self._params["double_tap_repeat"] and 0 != current == last_sent and time.time() - press_started > self._params["repeat_delay_ms"] / 1e3:
+                    self.send(current)
+                    # Avoid sending an extra chord when the repeated chord is released.
+                    sent_first_up = True
                 continue
             try:
                 current = self._parse(report)
             except InvalidReport:
                 continue
 
-            repeat_timer = 0
+            press_started = time.time()
             if self._params["first_up_chord_send"]:
                 if keystate & ~current and not sent_first_up:
                     # A finger went up: send a first-up chord and remember it.
