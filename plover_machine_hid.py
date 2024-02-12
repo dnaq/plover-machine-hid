@@ -10,8 +10,14 @@ The order of the buttons (from left to right) is the same as in `KEYS_LAYOUT`.
 Most buttons have the same names as in GeminiPR, except for the extra buttons
 which are called X1-X26.
 '''
+
+from copy import copy
+from PyQt5.QtCore import QVariant, pyqtSignal
+from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QCheckBox
+
 from plover.machine.base import ThreadedStenotypeBase
 from plover import log
+from plover.misc import boolean
 
 import hid
 import platform
@@ -79,9 +85,17 @@ class HidMachine(ThreadedStenotypeBase):
         else:
             raise InvalidReport()
 
+    def send(self, keystate):
+        steno_actions = self.keymap.keys_to_actions(
+            [key for i, key in enumerate(STENO_KEY_CHART) if keystate >> (63 - i) & 1]
+        )
+        if steno_actions:
+            self._notify(steno_actions)
+
     def run(self):
         self._ready()
         keystate = 0
+        sent = False
         while not self.finished.wait(0):
             try:
                 report = self._hid.read(65536, timeout=1000)
@@ -94,14 +108,18 @@ class HidMachine(ThreadedStenotypeBase):
                 report = self._parse(report)
             except InvalidReport:
                 continue
-            keystate |= report
-            if report == 0:
-                steno_actions = self.keymap.keys_to_actions(
-                    [key for i, key in enumerate(STENO_KEY_CHART) if keystate >> (63 - i) & 1]
-                )
-                if steno_actions:
-                    self._notify(steno_actions)
-                keystate = 0
+            if self._params["first_up_chord_send"]:
+                if keystate & ~report and not sent:
+                    self.send(keystate)
+                    sent = True
+                if report & ~keystate:
+                    sent = False
+                keystate = report
+            else:
+                keystate |= report
+                if report == 0:
+                    self.send(keystate)
+                    keystate = 0
 
     def start_capture(self):
         self.finished.clear()
@@ -134,4 +152,31 @@ class HidMachine(ThreadedStenotypeBase):
 
     @classmethod
     def get_option_info(cls):
-        return {}
+        return {
+            "first_up_chord_send": (False, boolean),
+        }
+
+class HidOption(QGroupBox):
+
+    valueChanged = pyqtSignal(QVariant)
+
+    def __init__(self):
+        self._value = {}
+        super().__init__()
+        vbox = QVBoxLayout()
+        self.fucs = QCheckBox("First-up chord send")
+        self.fucs.setToolTip(
+            "When the first key in a chord is released, the chord is sent.\n"
+            "If the key is pressed and released again, another chord is sent."
+        )
+        self.fucs.stateChanged.connect(self.on_fucs_changed)
+        vbox.addWidget(self.fucs)
+        self.setLayout(vbox)
+
+    def setValue(self, value):
+        self._value = copy(value)
+        self.fucs.setChecked(value["first_up_chord_send"])
+
+    def on_fucs_changed(self, value):
+        self._value["first_up_chord_send"] = value
+        self.valueChanged.emit(self._value)
