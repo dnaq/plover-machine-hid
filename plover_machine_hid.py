@@ -10,12 +10,14 @@ The order of the buttons (from left to right) is the same as in `KEYS_LAYOUT`.
 Most buttons have the same names as in GeminiPR, except for the extra buttons
 which are called X1-X26.
 '''
+
 from plover.machine.base import ThreadedStenotypeBase
 from plover import log
+from plover.misc import boolean
 
-from bitarray import bitarray
 import hid
 import platform
+import time
 
 # This is a hack to not open the hid device in exclusive mode on
 # darwin, if the version of hidapi installed is current enough
@@ -76,36 +78,61 @@ class HidMachine(ThreadedStenotypeBase):
         # map the report id to the contents in a good way, so we force
         # compliant devices to always use a report id of 0x50 ('P').
         if len(report) > SIMPLE_REPORT_LEN and report[0] == 0x50:
-            b = bitarray()
-            b.frombytes(report[1:SIMPLE_REPORT_LEN+1])
-            return b
+            return int.from_bytes(report[1:SIMPLE_REPORT_LEN+1], 'big')
         else:
             raise InvalidReport()
 
+    def send(self, keystate):
+        steno_actions = self.keymap.keys_to_actions(
+            [key for i, key in enumerate(STENO_KEY_CHART) if keystate >> (63 - i) & 1]
+        )
+        if steno_actions:
+            self._notify(steno_actions)
+
     def run(self):
         self._ready()
-        keystate = bitarray(N_LEVERS)
-        keystate.setall(False)
+        keystate = 0
+        current = 0
+        last_sent = 0
+        press_started = time.time()
+        sent_first_up = False
         while not self.finished.wait(0):
+            interval_ms = self._params["repeat_interval_ms"]
             try:
-                report = self._hid.read(65536, timeout=1000)
+                report = self._hid.read(65536, timeout=interval_ms)
             except hid.HIDException:
                 self._error()
                 return
             if not report:
+                # The set of keys pressed down hasn't changed. Figure out if we need to be sending repeats:
+                if self._params["double_tap_repeat"] and 0 != current == last_sent and time.time() - press_started > self._params["repeat_delay_ms"] / 1e3:
+                    self.send(current)
+                    # Avoid sending an extra chord when the repeated chord is released.
+                    sent_first_up = True
                 continue
             try:
-                report = self._parse(report)
+                current = self._parse(report)
             except InvalidReport:
                 continue
-            keystate |= report
-            if not report.any():
-                steno_actions = self.keymap.keys_to_actions(
-                    [STENO_KEY_CHART[i] for (i, x) in enumerate(keystate) if x]
-                )
-                if steno_actions:
-                    self._notify(steno_actions)
-                keystate.setall(False)
+
+            press_started = time.time()
+            if self._params["first_up_chord_send"]:
+                if keystate & ~current and not sent_first_up:
+                    # A finger went up: send a first-up chord and remember it.
+                    self.send(keystate)
+                    last_sent = keystate
+                    sent_first_up = True
+                if current & ~keystate:
+                    # A finger went down: get ready to send a new first-up chord.
+                    sent_first_up = False
+                keystate = current
+            else:
+                keystate |= current
+                if current == 0:
+                    # All fingers are up: send the "total" chord and reset it.
+                    self.send(keystate)
+                    last_sent = keystate
+                    keystate = 0
 
     def start_capture(self):
         self.finished.clear()
@@ -138,4 +165,10 @@ class HidMachine(ThreadedStenotypeBase):
 
     @classmethod
     def get_option_info(cls):
-        return {}
+        return {
+            "first_up_chord_send": (False, boolean),
+            "double_tap_repeat": (False, boolean),
+            "repeat_delay_ms": (200, int),
+            "repeat_interval_ms": (50, int),
+        }
+
