@@ -13,7 +13,8 @@ which are called X1-X26.
 
 from copy import copy
 from PyQt5.QtCore import QVariant, pyqtSignal
-from PyQt5.QtWidgets import QGroupBox, QVBoxLayout, QCheckBox
+from PyQt5.QtGui import QIntValidator
+from PyQt5.QtWidgets import QGroupBox, QHBoxLayout, QVBoxLayout, QCheckBox, QLabel, QLineEdit
 
 from plover.machine.base import ThreadedStenotypeBase
 from plover import log
@@ -95,30 +96,49 @@ class HidMachine(ThreadedStenotypeBase):
     def run(self):
         self._ready()
         keystate = 0
-        sent = False
+        current = 0
+        last_sent = 0
+        repeat_timer = 0
+        sent_first_up = False
         while not self.finished.wait(0):
+            interval_ms = self._params["repeat_interval_ms"]
             try:
-                report = self._hid.read(65536, timeout=1000)
+                report = self._hid.read(65536, timeout=interval_ms)
             except hid.HIDException:
                 self._error()
                 return
             if not report:
+                # The set of keys pressed down hasn't changed. Figure out if we need to be sending repeats:
+                if self._params["double_tap_repeat"] and 0 != current == last_sent:
+                    if repeat_timer < self._params["repeat_delay_ms"]:
+                        repeat_timer += interval_ms
+                    else:
+                        self.send(current)
+                        # Avoid sending an extra chord when the repeated chord is released.
+                        sent_first_up = True
                 continue
             try:
-                report = self._parse(report)
+                current = self._parse(report)
             except InvalidReport:
                 continue
+
+            repeat_timer = 0
             if self._params["first_up_chord_send"]:
-                if keystate & ~report and not sent:
+                if keystate & ~current and not sent_first_up:
+                    # A finger went up: send a first-up chord and remember it.
                     self.send(keystate)
-                    sent = True
-                if report & ~keystate:
-                    sent = False
-                keystate = report
+                    last_sent = keystate
+                    sent_first_up = True
+                if current & ~keystate:
+                    # A finger went down: get ready to send a new first-up chord.
+                    sent_first_up = False
+                keystate = current
             else:
-                keystate |= report
-                if report == 0:
+                keystate |= current
+                if current == 0:
+                    # All fingers are up: send the "total" chord and reset it.
                     self.send(keystate)
+                    last_sent = keystate
                     keystate = 0
 
     def start_capture(self):
@@ -154,6 +174,9 @@ class HidMachine(ThreadedStenotypeBase):
     def get_option_info(cls):
         return {
             "first_up_chord_send": (False, boolean),
+            "double_tap_repeat": (False, boolean),
+            "repeat_delay_ms": (200, int),
+            "repeat_interval_ms": (50, int),
         }
 
 class HidOption(QGroupBox):
@@ -171,12 +194,52 @@ class HidOption(QGroupBox):
         )
         self.fucs.stateChanged.connect(self.on_fucs_changed)
         vbox.addWidget(self.fucs)
+
+        self.dtap = QCheckBox("Double tap to repeat")
+        self.dtap.setToolTip("Tap and then hold a chord to send it repeatedly.")
+        self.dtap.stateChanged.connect(self.on_dtap_changed)
+        vbox.addWidget(self.dtap)
+
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Repeat delay (ms):"))
+        self.repeat_delay = QLineEdit("")
+        self.repeat_delay.setToolTip("Delay before chord starts repeating.")
+        self.repeat_delay.setValidator(QIntValidator(10, 10000, self.repeat_delay))
+        self.repeat_delay.textChanged.connect(self.on_repeat_delay_changed)
+        row.addWidget(self.repeat_delay)
+        vbox.addLayout(row)
+
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Repeat interval (ms):"))
+        self.repeat_interval = QLineEdit("")
+        self.repeat_interval.setToolTip("Interval between chord repetitions.")
+        self.repeat_interval.setValidator(QIntValidator(10, 10000, self.repeat_interval))
+        self.repeat_interval.textChanged.connect(self.on_repeat_interval_changed)
+        row.addWidget(self.repeat_interval)
+        vbox.addLayout(row)
+
         self.setLayout(vbox)
 
     def setValue(self, value):
         self._value = copy(value)
         self.fucs.setChecked(value["first_up_chord_send"])
+        self.dtap.setChecked(value["double_tap_repeat"])
+        self.repeat_delay.setText(str(value["repeat_delay_ms"]))
+        self.repeat_interval.setText(str(value["repeat_interval_ms"]))
 
     def on_fucs_changed(self, value):
         self._value["first_up_chord_send"] = value
         self.valueChanged.emit(self._value)
+
+    def on_dtap_changed(self, value):
+        self._value["double_tap_repeat"] = value
+        self.valueChanged.emit(self._value)
+
+    def on_repeat_delay_changed(self, value):
+        self._value["repeat_delay_ms"] = int(value)
+        self.valueChanged.emit(self._value)
+
+    def on_repeat_interval_changed(self, value):
+        self._value["repeat_interval_ms"] = int(value)
+        self.valueChanged.emit(self._value)
+
