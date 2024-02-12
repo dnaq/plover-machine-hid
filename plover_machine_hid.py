@@ -180,7 +180,6 @@ class HidMachine(ThreadedStenotypeBase):
 class HidOption(QGroupBox):
 
     valueChanged = pyqtSignal(QVariant)
-    setters = []
 
     def checkbox(self, name, label, tooltip):
         checkbox = QCheckBox(label)
@@ -208,12 +207,13 @@ class HidOption(QGroupBox):
 
     def __init__(self):
         super().__init__()
+        self.setters = []
         self._value = {}
         vbox = QVBoxLayout()
         vbox.addWidget(self.checkbox("first_up_chord_send", "Send chord on first key release", "When the first key in a chord is released, the chord is sent.\nIf the key is pressed and released again, another chord is sent."))
         vbox.addWidget(self.checkbox("double_tap_repeat", "Double tap to repeat", "Tap and then hold a chord to send it repeatedly."))
         vbox.addLayout(self.number("repeat_delay_ms", "Repeat delay (ms)", "Delay before chord starts repeating.", 10, 10000))
-        vbox.addLayout(self.number("repeat_interval_ms", "Repeat delay (ms)", "Interval between chord repetitions.", 10, 10000))
+        vbox.addLayout(self.number("repeat_interval_ms", "Repeat interval (ms)", "Interval between chord repetitions.", 10, 10000))
         self.setLayout(vbox)
 
     def setValue(self, value):
