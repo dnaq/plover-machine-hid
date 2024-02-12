@@ -13,7 +13,6 @@ which are called X1-X26.
 from plover.machine.base import ThreadedStenotypeBase
 from plover import log
 
-from bitarray import bitarray
 import hid
 import platform
 
@@ -76,16 +75,13 @@ class HidMachine(ThreadedStenotypeBase):
         # map the report id to the contents in a good way, so we force
         # compliant devices to always use a report id of 0x50 ('P').
         if len(report) > SIMPLE_REPORT_LEN and report[0] == 0x50:
-            b = bitarray()
-            b.frombytes(report[1:SIMPLE_REPORT_LEN+1])
-            return b
+            return int.from_bytes(report[1:SIMPLE_REPORT_LEN+1], 'big')
         else:
             raise InvalidReport()
 
     def run(self):
         self._ready()
-        keystate = bitarray(N_LEVERS)
-        keystate.setall(False)
+        keystate = 0
         while not self.finished.wait(0):
             try:
                 report = self._hid.read(65536, timeout=1000)
@@ -99,13 +95,13 @@ class HidMachine(ThreadedStenotypeBase):
             except InvalidReport:
                 continue
             keystate |= report
-            if not report.any():
+            if report == 0:
                 steno_actions = self.keymap.keys_to_actions(
-                    [STENO_KEY_CHART[i] for (i, x) in enumerate(keystate) if x]
+                    [key for i, key in enumerate(STENO_KEY_CHART) if keystate >> (63 - i) & 1]
                 )
                 if steno_actions:
                     self._notify(steno_actions)
-                keystate.setall(False)
+                keystate = 0
 
     def start_capture(self):
         self.finished.clear()
