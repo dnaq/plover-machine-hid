@@ -182,64 +182,43 @@ class HidMachine(ThreadedStenotypeBase):
 class HidOption(QGroupBox):
 
     valueChanged = pyqtSignal(QVariant)
+    setters = []
+
+    def checkbox(self, name, label, tooltip):
+        checkbox = QCheckBox(label)
+        checkbox.setToolTip(tooltip)
+        def on_changed(value):
+            self._value[name] = value
+            self.valueChanged.emit(self._value)
+        checkbox.stateChanged.connect(on_changed)
+        self.setters.append(lambda value: checkbox.setChecked(value[name]))
+        return checkbox
+
+    def number(self, name, label, tooltip, minimum, maximum):
+        edit = QLineEdit("")
+        edit.setToolTip(tooltip)
+        edit.setValidator(QIntValidator(minimum, maximum, edit))
+        def on_changed(value):
+            self._value[name] = int(value)
+            self.valueChanged.emit(self._value)
+        edit.textChanged.connect(on_changed)
+        row = QHBoxLayout()
+        row.addWidget(QLabel(label))
+        row.addWidget(edit)
+        self.setters.append(lambda value: edit.setText(str(value[name])))
+        return row
 
     def __init__(self):
-        self._value = {}
         super().__init__()
+        self._value = {}
         vbox = QVBoxLayout()
-        self.fucs = QCheckBox("First-up chord send")
-        self.fucs.setToolTip(
-            "When the first key in a chord is released, the chord is sent.\n"
-            "If the key is pressed and released again, another chord is sent."
-        )
-        self.fucs.stateChanged.connect(self.on_fucs_changed)
-        vbox.addWidget(self.fucs)
-
-        self.dtap = QCheckBox("Double tap to repeat")
-        self.dtap.setToolTip("Tap and then hold a chord to send it repeatedly.")
-        self.dtap.stateChanged.connect(self.on_dtap_changed)
-        vbox.addWidget(self.dtap)
-
-        row = QHBoxLayout()
-        row.addWidget(QLabel("Repeat delay (ms):"))
-        self.repeat_delay = QLineEdit("")
-        self.repeat_delay.setToolTip("Delay before chord starts repeating.")
-        self.repeat_delay.setValidator(QIntValidator(10, 10000, self.repeat_delay))
-        self.repeat_delay.textChanged.connect(self.on_repeat_delay_changed)
-        row.addWidget(self.repeat_delay)
-        vbox.addLayout(row)
-
-        row = QHBoxLayout()
-        row.addWidget(QLabel("Repeat interval (ms):"))
-        self.repeat_interval = QLineEdit("")
-        self.repeat_interval.setToolTip("Interval between chord repetitions.")
-        self.repeat_interval.setValidator(QIntValidator(10, 10000, self.repeat_interval))
-        self.repeat_interval.textChanged.connect(self.on_repeat_interval_changed)
-        row.addWidget(self.repeat_interval)
-        vbox.addLayout(row)
-
+        vbox.addWidget(self.checkbox("first_up_chord_send", "Send chord on first key release", "When the first key in a chord is released, the chord is sent.\nIf the key is pressed and released again, another chord is sent."))
+        vbox.addWidget(self.checkbox("double_tap_repeat", "Double tap to repeat", "Tap and then hold a chord to send it repeatedly."))
+        vbox.addLayout(self.number("repeat_delay_ms", "Repeat delay (ms)", "Delay before chord starts repeating.", 10, 10000))
+        vbox.addLayout(self.number("repeat_interval_ms", "Repeat delay (ms)", "Interval between chord repetitions.", 10, 10000))
         self.setLayout(vbox)
 
     def setValue(self, value):
         self._value = copy(value)
-        self.fucs.setChecked(value["first_up_chord_send"])
-        self.dtap.setChecked(value["double_tap_repeat"])
-        self.repeat_delay.setText(str(value["repeat_delay_ms"]))
-        self.repeat_interval.setText(str(value["repeat_interval_ms"]))
-
-    def on_fucs_changed(self, value):
-        self._value["first_up_chord_send"] = value
-        self.valueChanged.emit(self._value)
-
-    def on_dtap_changed(self, value):
-        self._value["double_tap_repeat"] = value
-        self.valueChanged.emit(self._value)
-
-    def on_repeat_delay_changed(self, value):
-        self._value["repeat_delay_ms"] = int(value)
-        self.valueChanged.emit(self._value)
-
-    def on_repeat_interval_changed(self, value):
-        self._value["repeat_interval_ms"] = int(value)
-        self.valueChanged.emit(self._value)
-
+        for setter in self.setters:
+            setter(value)
