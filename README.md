@@ -110,6 +110,18 @@ X2 S2- K- W- R- *2 *4 -R -B -G -S -Z
           #  A   O  E  U  #
 ```
 
+## Installing the plover-machine-hid plugin in Plover (Windows)
+
+1. Get hidapi.dll. Go to https://github.com/libusb/hidapi/releases and download hidapi-win.zip. Open the zip file, navigate to the x64 folder (or x32 if you have a 32-bit OS, not common), and copy hidapi.dll to your Plover install `data` folder, usually `C:\Program Files\Open Steno Project\Plover 4.0.0rc2\data` (or, if you have the portable version of Plover, wherever you uncompressed it).
+    
+2. Follow the instructions from the Plover wiki (https://plover.wiki/index.php/Plugins#Plugins_not_on_PyPI) to install the plugin, which essentially tell you to install Git, open a terminal in your Plover install folder, and then run
+```
+.\plover_console.exe -s plover_plugins install git+https://github.com/dnaq/plover-machine-hid
+```
+
+3. Restart Plover. A new type of machine (Plover HID) should show up in the dropdown box.
+
+
 ## Plover HID Inspector
 
 @jthlim has created a WebHID based tool for inspecting output from any Plover HID machine.
