@@ -1,8 +1,8 @@
 from copy import copy
 
-from PyQt5.QtCore import QVariant, pyqtSignal
-from PyQt5.QtGui import QIntValidator
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QIntValidator
+from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QVBoxLayout,
@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
 
 class HidOption(QGroupBox):
 
-    valueChanged = pyqtSignal(QVariant)
+    valueChanged = Signal('QVariant')
 
     def checkbox(self, name, label, tooltip):
         checkbox = QCheckBox(label)
