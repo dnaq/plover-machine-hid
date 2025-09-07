@@ -43,29 +43,27 @@ SIMPLE_REPORT_LEN: int = N_LEVERS // 8
 class InvalidReport(Exception):
     pass
 
-STENO_KEY_CHART = ("S-", "T-", "K-", "P-", "W-", "H-",
-                   "R-", "A-", "O-", "*", "-E", "-U",
+STENO_KEY_CHART = ("S1-", "T-", "K-", "P-", "W-", "H-",
+                   "R-", "A-", "O-", "*1", "-E", "-U",
                    "-F", "-R", "-P", "-B", "-L", "-G",
-                   "-T", "-S", "-D", "-Z", "#",
-                   "X1", "X2", "X3", "X4", "X5", "X6",
-                   "X7", "X8", "X9", "X10", "X11", "X12",
-                   "X13", "X14", "X15", "X16", "X17", "X18",
-                   "X19", "X20", "X21", "X22", "X23", "X24",
-                   "X25", "X26", "X27", "X28", "X29", "X30",
-                   "X31", "X32", "X33", "X34", "X35", "X36",
-                   "X37", "X38", "X39", "X40", "X41")
+                   "-T", "-S", "-D", "-Z", "#1",
+                   "S2", "*2", "*3", "*4", "#2", "#3",
+                   "#4", "#5", "#6", "#7", "#8", "#9",
+                   "#A", "#B", "#C", "X1", "X2", "X3",
+                   "X4", "X5", "X6", "X7", "X8", "X9",
+                   "X10", "X11", "X12", "X13", "X14", "X15",
+                   "X16", "X17", "X18", "X19", "X20", "X21",
+                   "X22", "X23", "X24", "X25", "X26")
 
 class HidMachine(ThreadedStenotypeBase):
     KEYS_LAYOUT: str = '''
-        #  #  #  #  #  #  #  #  #  #
-        S- T- P- H- *  -F -P -L -T -D
-        S- K- W- R- *  -R -B -G -S -Z
-              A- O-    -E -U
+        #1 #2 #3 #4 #5 #6 #7 #8 #9 #A #B #C
+        S1- T- P- H- *1 *3 -F -P -L -T -D
+        S2- K- W- R- *2 *4 -R -B -G -S -Z
+               A- O-       -E -U
      X1  X2  X3  X4  X5  X6  X7  X8  X9  X10
      X11 X12 X13 X14 X15 X16 X17 X18 X19 X20
-     X21 X22 X23 X24 X25 X26 X27 X28 X29 X30
-     X31 X32 X33 X34 X35 X36 X37 X38 X39 X40
-     X41
+     X21 X22 X23 X24 X25 X26
     '''
     def __init__(self, params):
         super().__init__()
