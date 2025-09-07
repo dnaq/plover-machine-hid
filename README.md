@@ -93,13 +93,19 @@ to change the usage to one where that doesn't happen.
 For historical reasons we reuse the names of the standard steno keys, but we add extra keys so that we reach 64 keys in total.
 The keys are ordered as follows:
 
+First, there are the standard Ward Stone Ireland keys:
+
 ```
-   S- T- K- P- W- H- R- A- O- * -E -U -F -R -P -B -L -G -T -S -D -Z #
+S1- T- K- P- W- H- R- A- O- *1 -E -U -F -R -P -B -L -G -T -S -D -Z #1
 ```
-and are then followed by key `X1-X26`
+followed by extra steno keys:
+```
+S2- *2 *3 *4 #2 #3 #4 #5 #6 #7 #8 #9 #A #B #C
+```
+then followed by keys `X1-X26`
 
 So the first bit/byte of the report (after the report type byte) maps to key
-`S-` and the last bit/byte of the report maps to `X26`.
+`S1-` and the last bit/byte of the report maps to `X26`.
 
 ## Sample Firmware
 
@@ -107,7 +113,7 @@ Sample firmware for the georgi is included in this repository. It defines a defa
 ```
 X1 S1- T- P- H- *1 *3 -F -P -L -T -D
 X2 S2- K- W- R- *2 *4 -R -B -G -S -Z
-          #  A   O  E  U  #
+         #1  A   O  E  U  #2
 ```
 
 ## Installing the plover-machine-hid plugin in Plover (Windows)
