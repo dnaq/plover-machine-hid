@@ -1,5 +1,9 @@
 # The Plover HID protocol
 
+## Archival Notice
+
+This work has been merged into mainline plover, and this plugin is no longer necessary.
+
 ## Background
 
 Currently most hobbyist steno machines use either the TXBolt protocol or the
